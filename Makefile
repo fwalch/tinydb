@@ -12,7 +12,7 @@ nativefile=$(subst /,\\,$(1))
 CHECKDIR=@if not exist $(call nativefile,$(dir $@)) mkdir $(call nativefile,$(dir $@))
 LDFLAGS:= -Wl,--enable-auto-import
 EXEEXT:=.exe
-BATEXT:=.bat
+BATEXT:=.cmd
 else
 CHECKDIR=@mkdir -p $(dir $@)
 EXEEXT:=
