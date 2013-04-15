@@ -1,0 +1,4 @@
+bin/ex01-query1$(EXEEXT): bin/exercises/ex01/Query1.o $(obj)
+	$(BUILDEXE)
+
+exercises_bin: bin/ex01-query1$(EXEEXT)
