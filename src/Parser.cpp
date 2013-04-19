@@ -1,6 +1,5 @@
 #include <unordered_set>
 #include <algorithm>
-#include <iostream>
 #include <cstring>
 #include <cctype>
 #include "Parser.hpp"
@@ -92,6 +91,14 @@ char read(const char** text) {
   return c;
 }
 
+bool assume(string assumed, const char* actual) {
+  string word = peekWord(actual);
+  string lowerWord;
+  lowerWord.resize(word.size());
+  std::transform(word.begin(), word.end(), lowerWord.begin(), ::tolower);
+  return lowerWord == assumed;
+}
+
 void expect(string expected, const char** actual, string context) {
   string word = readWord(actual);
   string lowerWord;
@@ -110,7 +117,6 @@ void expect(char expected, const char** actual, string context) {
     if (isEndOfString(peek(*actual))) {
       throw Parser::SyntacticError("Expected " + string(&expected, 1) + " in " + context);
     }
-    cout << "A";
     throw Parser::SyntacticError("Expected " + string(&expected, 1) + ", but got " + string(*actual) + " in " + context);
   }
 }
@@ -242,11 +248,11 @@ void select(const char** query, Parser::Result& result) {
     result.projections.push_back(attr);
   }
   else {
-    while (peekWord(*query) != FROM) {
+    while (!assume(FROM, *query)) {
       Parser::Attribute attr;
       attribute(query, attr);
       result.projections.push_back(attr);
-      if (peekWord(*query) != FROM) expect(COMMA, query, "SELECT clause");
+      if (!assume(FROM, *query)) expect(COMMA, query, "SELECT clause");
     }
   }
 
@@ -256,13 +262,13 @@ void select(const char** query, Parser::Result& result) {
 void from(const char** query, Parser::Result& result) {
   expect(FROM, query, "FROM clause");
 
-  while (peekWord(*query) != WHERE) {
+  while (!assume(WHERE, *query)) {
     Parser::Relation rel;
     relation(query, rel);
     result.relations.push_back(rel);
 
     if (isEndOfString(peek(*query))) return;
-    if (peekWord(*query) != WHERE) expect(COMMA, query, "FROM clause");
+    if (!assume(WHERE, *query)) expect(COMMA, query, "FROM clause");
   }
   where(query, result);
 }
