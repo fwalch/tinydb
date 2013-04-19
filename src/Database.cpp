@@ -1,4 +1,5 @@
 #include "Database.hpp"
+#include "Exception.hpp"
 //---------------------------------------------------------------------------
 using namespace std;
 //---------------------------------------------------------------------------
@@ -67,8 +68,7 @@ void Database::read()
 {
    ifstream in(repoFile);
    if (!in.is_open()) {
-      cerr << "unable to read " << repoFile << endl;
-      throw;
+      throw Exception("Unable to read " + repoFile);
    }
 
    string tableName;
@@ -85,8 +85,7 @@ void Database::write()
 {
    ofstream out(repoFile);
    if (!out.is_open()) {
-      cerr << "unable to write " << repoFile << endl;
-      throw;
+      throw Exception("Unable to write " + repoFile);
    }
 
    for (auto iter=tables.begin(),limit=tables.end();iter!=limit;++iter) {
@@ -102,15 +101,14 @@ Table& Database::createTable(const std::string& name)
    // Create a table
 {
    if (tables.count(name)) {
-      cerr << "table " << name << " already exists" << endl;
-      throw;
+      throw Exception("table " + name + " already exists");
    }
 
    string tableFile=baseDir+name,indexFile=tableFile+".idx";
    remove(tableFile.c_str());
-   { ofstream out(tableFile); if (!out.is_open()) { cerr << "unable to create " << tableFile << endl; throw; } }
+   { ofstream out(tableFile); if (!out.is_open()) { throw Exception("unable to create " + tableFile); } }
    remove(indexFile.c_str());
-   { ofstream out(indexFile); if (!out.is_open()) { cerr << "unable to create " << indexFile << endl; throw; } }
+   { ofstream out(indexFile); if (!out.is_open()) { throw Exception("unable to create " + indexFile); } }
 
    Table& table=tables[name];
    table.file=tableFile;
@@ -124,8 +122,7 @@ void Database::dropTable(const std::string& name)
    // Drop a table
 {
    if (!tables.count(name)) {
-      cerr << "table " << name << " not found" << endl;
-      throw;
+      throw Exception("Table " + name + " not found");
    }
 
    Table& table=tables[name];
@@ -140,8 +137,7 @@ Table& Database::getTable(const std::string& name)
    // Get a table
 {
    if (!tables.count(name)) {
-      cerr << "table " << name << " not found" << endl;
-      throw;
+      throw Exception("Table " + name + " not found");
    }
    return tables[name];
 }

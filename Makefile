@@ -19,7 +19,7 @@ EXEEXT:=
 BATEXT:=
 endif
 
-all: bin/admin$(EXEEXT) examples_bin exercises_bin
+all: bin/admin$(EXEEXT) bin/query$(EXEEXT) examples_bin exercises_bin
 
 db:
 	cd data && ./loaduni$(BATEXT)

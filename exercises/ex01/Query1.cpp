@@ -11,18 +11,20 @@ using namespace std;
 
 int main()
 {
-  cout << "# Problem" << endl;
-  cout << "Find all students that attended the lectures together with Schopenhauer, excluding Schopenhauer himself." << endl;
+  cout << "# Problem" << endl
+       << "Find all students that attended the lectures together with Schopenhauer, excluding Schopenhauer himself." << endl;
 
-  cout << "# SQL" << endl;
-  cout << "SELECT s1.name" << endl;
-  cout << "FROM studenten s1, hoeren h1," << endl;
-  cout << "     studenten s2, hoeren h2" << endl;
-  cout << "WHERE s1.name = 'Schopenhauer'" << endl;
-  cout << "  AND s1.matrnr <> s2.matrnr" << endl;
-  cout << "  AND s1.matrnr = h1.matrnr" << endl;
-  cout << "  AND h1.vorlnr = h2.vorlnr" << endl;
-  cout << "  AND h2.matrnr = s2.matrnr" << endl;
+  cout << "# SQL" << endl
+       << "SELECT s1.name" << endl
+       << "FROM studenten s1, hoeren h1," << endl
+       << "     studenten s2, hoeren h2" << endl
+       << "WHERE s1.name = 'Schopenhauer'" << endl
+       << "  AND s1.matrnr <> s2.matrnr" << endl
+       << "  AND s1.matrnr = h1.matrnr" << endl
+       << "  AND h1.vorlnr = h2.vorlnr" << endl
+       << "  AND h2.matrnr = s2.matrnr" << endl;
+
+  cout << "# Query output" << endl;
 
   Database db;
   db.open("data/uni");
