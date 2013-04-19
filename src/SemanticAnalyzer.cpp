@@ -35,6 +35,9 @@ void SemanticAnalyzer::analyzeAttribute(Parser::Attribute& attr, ::Attribute::Ty
       for (unsigned i = 0; i < table.getAttributeCount(); i++) {
         ::Attribute tableAttr = table.getAttribute(i);
         if (tableAttr.getName() == attr.name) {
+          if (found) {
+            throw SemanticError("Attribute '" + attr.name + "' used in " + context + " is ambiguous");
+          }
           type = tableAttr.getType();
           found = true;
           break;

@@ -11,6 +11,7 @@ void PlanGen::loadTables() {
   }
 }
 
+//TODO: this is ugly
 void PlanGen::loadProjections() {
   for (Parser::Attribute& attribute : result.projections) {
     if (attribute.name == Parser::Attribute::STAR) {
@@ -40,7 +41,18 @@ void PlanGen::loadProjections() {
     else {
       if (attribute.relation == "") {
         // SELECT field
-        throw "Not implemented";
+        for (auto tableIt : tables) {
+          Table* table = tableIt.second;
+          for (unsigned i = 0; i < table->getAttributeCount(); i++) {
+            string attrName = table->getAttribute(i).getName();
+            if (attribute.name == attrName) {
+              const Register* attrRegister = tablescans[tableIt.first]->getOutput(attrName);
+              registers[attribute.getName()] = attrRegister;
+              projection.push_back(attrRegister);
+              goto next;
+            }
+          }
+        }
       }
       else {
         // SELECT relation.field
@@ -51,6 +63,7 @@ void PlanGen::loadProjections() {
         projection.push_back(registers[attrName]);
       }
     }
+next:;
   }
 }
 
