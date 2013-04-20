@@ -53,29 +53,31 @@ inline bool isEndOfString(char character) {
   return character == EOS;
 }
 
+inline void skipLeadingWhitespace(const char** text) {
+  while (isWhitespace(**text) && !isEndOfString(**text)) (*text)++;
+}
+
+inline void readUntilEndOfWord(const char** text) {
+  while (!isEndOfWord(**text) && !isEndOfString(**text)) (*text)++;
+}
+
 string peekWord(const char* text) {
   const char* wordStart = text;
 
-  // Skip leading whitespace
-  while (isWhitespace(*wordStart) && !isEndOfString(*wordStart)) wordStart++;
+  skipLeadingWhitespace(&wordStart);
   text = wordStart;
-
-  // Read word until whitespace or end of string
-  while (!isEndOfWord(*text) && !isEndOfString(*text)) text++;
+  readUntilEndOfWord(&text);
 
   return string(wordStart, text - wordStart);
 }
 
 char peek(const char* text) {
-  // Skip leading whitespace
-  while (isWhitespace(*text) && !isEndOfString(*text)) text++;
-
+  skipLeadingWhitespace(&text);
   return *text;
 }
 
 string readWord(const char** text) {
-  // Skip leading whitespace
-  while (isWhitespace(**text) && !isEndOfString(**text)) (*text)++;
+  skipLeadingWhitespace(text);
 
   string word = peekWord(*text);
   *text += word.size();
@@ -83,8 +85,7 @@ string readWord(const char** text) {
 }
 
 char read(const char** text) {
-  // Skip leading whitespace
-  while (isWhitespace(**text) && !isEndOfString(**text)) (*text)++;
+  skipLeadingWhitespace(text);
 
   char c = peek(*text);
   if (!isEndOfString(c)) *text += 1;
@@ -93,17 +94,21 @@ char read(const char** text) {
 
 bool assume(string assumed, const char* actual) {
   string word = peekWord(actual);
+
   string lowerWord;
   lowerWord.resize(word.size());
   std::transform(word.begin(), word.end(), lowerWord.begin(), ::tolower);
+
   return lowerWord == assumed;
 }
 
 void expect(string expected, const char** actual, string context) {
   string word = readWord(actual);
+
   string lowerWord;
   lowerWord.resize(word.size());
   std::transform(word.begin(), word.end(), lowerWord.begin(), ::tolower);
+
   if (lowerWord != expected) {
     if (isEndOfString(peek(*actual))) {
       throw Parser::SyntacticError("Expected " + expected + " in " + context);
@@ -207,8 +212,7 @@ void attribute(const char** query, Parser::Attribute& attribute) {
 void relation(const char** query, Parser::Relation& relation) {
   string word1 = readWord(query);
   char nextChar = peek(*query);
-  string nextWord = peekWord(*query);
-  if (nextChar != COMMA && !isEndOfString(nextChar) && nextWord != WHERE) {
+  if (nextChar != COMMA && !isEndOfString(nextChar) && !assume(WHERE, *query)) {
     if (nextChar == STAR) {
       // SELECT relation.*
       expect(STAR, query, "SELECT clause");
