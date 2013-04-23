@@ -1,6 +1,6 @@
 CXX:=g++
 ifeq ($(USER),florian)
-#CXX:=clang++
+CXX:=clang++
 endif
 CXXFLAGS:=-g -std=c++0x -Wall -Wextra -Isrc
 
