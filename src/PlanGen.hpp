@@ -26,12 +26,15 @@ class PlanGen {
     std::unordered_map<std::string, const Attribute*> attributes;
     std::unordered_map<std::string, const Register*> registers;
     std::vector<const Register*> projection;
-    std::vector<std::pair<const Register*, const Register*>> selections;
+    std::vector<std::tuple<std::string, const Register*, const Register*>> selections;
+    std::vector<std::pair<const Register*, const Register*>> joins;
     std::vector<Register> constants;
 
     void loadTables();
     void loadProjections();
     void loadSelections();
+    void loadJoins();
+    std::unique_ptr<Operator> addSelections(std::string relation, std::unique_ptr<Operator> op, size_t& processedSelections);
 
   public:
     PlanGen(Database& database, Parser::Result& result)

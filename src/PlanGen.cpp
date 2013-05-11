@@ -67,15 +67,17 @@ next:;
   }
 }
 
-void PlanGen::loadSelections() {
+void PlanGen::loadJoins() {
   for (auto join : result.joinConditions) {
     registers[join.first.getName()] = tablescans.at(join.first.relation)->getOutput(join.first.name);
     registers[join.second.getName()] = tablescans.at(join.second.relation)->getOutput(join.second.name);
-    selections.push_back(make_pair(
+    joins.push_back(make_pair(
       registers.at(join.first.getName()),
       registers.at(join.second.getName())));
   }
+}
 
+void PlanGen::loadSelections() {
   for (auto selection : result.selections) {
     registers[selection.first.getName()] = tablescans.at(selection.first.relation)->getOutput(selection.first.name);
     Register c;
@@ -102,27 +104,50 @@ void PlanGen::loadSelections() {
     }
     int index = constants.size();
     constants.push_back(c);
-    selections.push_back(make_pair(
+    selections.push_back(make_tuple(
+      selection.first.relation,
       registers.at(selection.first.getName()),
       &constants.at(index)));
   }
+}
+
+unique_ptr<Operator> PlanGen::addSelections(string relation, unique_ptr<Operator> op, size_t& processedSelections) {
+  // If there are appropriate selections, add them now
+  for (auto selIt : selections) {
+    if (get<0>(selIt) == relation) {
+      unique_ptr<Chi> chi(new Chi(move(op), Chi::Equal, get<1>(selIt), get<2>(selIt)));
+      const Register* chiResult = chi->getResult();
+      op = unique_ptr<Selection>(new Selection(move(chi), chiResult));
+      processedSelections++;
+    }
+  }
+  return op;
 }
 
 unique_ptr<Operator> PlanGen::generate() {
   loadTables();
   loadProjections();
   loadSelections();
+  loadJoins();
+
+  size_t processedSelections = 0;
 
   unique_ptr<Operator> op = move(tablescans.begin()->second);
+  op = move(addSelections(tablescans.begin()->first, move(op), processedSelections));
 
   // Cross-product over all tables
   for (auto tsIt = ++tablescans.begin(); tsIt != tablescans.end(); tsIt++) {
-    op = unique_ptr<CrossProduct>(new CrossProduct(move(op), move(tsIt->second)));
+    unique_ptr<Operator> selection = move(addSelections(tsIt->first, move(tsIt->second), processedSelections));
+    op = unique_ptr<CrossProduct>(new CrossProduct(move(op), move(selection)));
   }
 
-  // Add selections
-  for (auto selIt : selections) {
-    unique_ptr<Chi> chi(new Chi(move(op), Chi::Equal, selIt.first, selIt.second));
+  if (selections.size() != processedSelections) {
+    throw Exception("Internal error: could not push down all selections.");
+  }
+
+  // Add joins
+  for (auto joinIt : joins) {
+    unique_ptr<Chi> chi(new Chi(move(op), Chi::Equal, joinIt.first, joinIt.second));
     const Register* chiResult = chi->getResult();
     op = unique_ptr<Selection>(new Selection(move(chi), chiResult));
   }
