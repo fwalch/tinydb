@@ -28,3 +28,16 @@ This should give the following output:
     Wissenschaftstheorie
     Bioethik
     Der Wiener Kreis
+
+## Query graph
+
+To generate an image file, the `circo` executable provided by graphviz is needed. When using the helper script `bin/graph.sh`, ImageMagick's `display` command is utilized.
+
+Test it using e.g.
+
+    bin/graph "SELECT * FROM a, b, c, d WHERE a.x=b.x AND b.x=c.x AND c.x=d.x AND d.x=a.x AND c.x=a.x" | circo -Tpng -oquery.png
+
+or use the provided helper script
+
+    bin/graph.sh "SELECT * FROM a, b, c, d WHERE a.x=b.x AND b.x=c.x AND c.x=d.x AND d.x=a.x AND c.x=a.x"
+

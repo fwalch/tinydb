@@ -19,7 +19,7 @@ EXEEXT:=
 BATEXT:=
 endif
 
-all: bin/admin$(EXEEXT) bin/query$(EXEEXT) examples_bin exercises_bin
+all: bin/admin$(EXEEXT) bin/query$(EXEEXT) bin/graph$(EXEEXT) examples_bin exercises_bin
 
 db:
 	cd data && ./loaduni$(BATEXT)
@@ -43,4 +43,4 @@ bin/exercises/%.o: exercises/%.cpp
 	$(CXX) -o$@ -c $(CXXFLAGS) $(DEPTRACKING) $<
 
 clean:
-	find bin -name '*.d' -delete -o -name '*.o' -delete -o '(' -perm -u=x '!' -type d ')' -delete
+	find bin -name '*.d' -delete -o -name '*.o' -delete -o '(' -perm -u=x '!' -type d '!' -name '*.sh' ')' -delete

@@ -1,6 +1,7 @@
 include src/operator/LocalMakefile
 
-obj:=bin/Database.o bin/Parser.o bin/SemanticAnalyzer.o bin/PlanGen.o bin/Register.o bin/Table.o bin/Attribute.o $(obj_operator)
+obj:=bin/Database.o bin/Parser.o bin/SemanticAnalyzer.o bin/PlanGen.o bin/Register.o bin/Table.o bin/Attribute.o $(obj_operator) \
+	bin/GraphWriter.o
 
 bin/admin$(EXEEXT): bin/Admin.o $(obj)
 	$(BUILDEXE)
@@ -8,3 +9,5 @@ bin/admin$(EXEEXT): bin/Admin.o $(obj)
 bin/query$(EXEEXT): bin/Query.o $(obj)
 	$(BUILDEXE)
 
+bin/graph$(EXEEXT): bin/Graph.o $(obj)
+	$(BUILDEXE)
