@@ -35,9 +35,9 @@ To generate an image file, the `circo` executable provided by graphviz is needed
 
 Test it using e.g.
 
-    bin/graph "SELECT * FROM a, b, c, d WHERE a.x=b.x AND b.x=c.x AND c.x=d.x AND d.x=a.x AND c.x=a.x" | circo -Tpng -oquery.png
+    bin/query data/uni "EXPLAIN * FROM studenten s, hoeren h, vorlesungen v WHERE s.matrnr=h.matrnr AND v.vorlnr=h.vorlnr" | circo -Tpng -oquery.png
 
 or use the provided helper script
 
-    bin/graph.sh "SELECT * FROM a, b, c, d WHERE a.x=b.x AND b.x=c.x AND c.x=d.x AND d.x=a.x AND c.x=a.x"
+    bin/graph.sh data/uni "EXPLAIN * FROM studenten s, hoeren h, vorlesungen v WHERE s.matrnr=h.matrnr AND v.vorlnr=h.vorlnr"
 

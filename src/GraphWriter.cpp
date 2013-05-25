@@ -10,14 +10,15 @@ void GraphWriter::writeQueryGraph(std::ostream& output) {
   output << "graph {" << endl;
 
   output << "  // Relations" << endl;
-  for (auto rel : result.relations) {
-    output << "  " << rel.getName() << ";" << endl;
+  for (auto node : graph.nodes) {
+    output << "  " << node.first << " [label=\"" + node.first + ": " + to_string(node.second->cardinality) + "\"];" << endl;
   }
 
   output << "  // Join edges" << endl;
-  for (auto join : result.joinConditions) {
-    output << "  " << join.first.relation <<
-      " -- " << join.second.relation << ";" << endl;
+  for (auto edge : graph.edges) {
+    output << "  " << edge.second->node1->relation <<
+      " -- " << edge.second->node2->relation <<
+      "[label=\"" + to_string(edge.second->selectivity) + "\"]"<< ";" << endl;
   }
 
   output << "}" << endl;

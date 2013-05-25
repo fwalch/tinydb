@@ -26,6 +26,7 @@ void Parser::parse(Result& result) {
 const string Parser::Attribute::STAR = "*";
 const char STAR = '*';
 const string SELECT = "select";
+const string EXPLAIN = "explain";
 const string FROM = "from";
 const string WHERE = "where";
 const string AND = "and";
@@ -240,7 +241,13 @@ void relation(const char** query, Parser::Relation& relation) {
 }
 
 void select(const char** query, Parser::Result& result) {
-  expect(SELECT, query, "SELECT clause");
+  if (assume(EXPLAIN, *query)) {
+    expect(EXPLAIN, query, "SELECT clause");
+    result.explain = true;
+  }
+  else {
+    expect(SELECT, query, "SELECT clause");
+  }
 
   if (peek(*query) == STAR) {
     // SELECT *

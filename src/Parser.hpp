@@ -46,6 +46,7 @@ class Parser {
     std::vector<Attribute> projections;
     std::vector<std::pair<Attribute, Constant>> selections;
     std::vector<std::pair<Attribute, Attribute>> joinConditions;
+    bool explain = false;
   };
   class SyntacticError : public Exception {
     public:

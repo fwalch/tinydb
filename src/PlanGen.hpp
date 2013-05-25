@@ -41,9 +41,9 @@ class PlanGen {
       : result(result), database(database) { }
     std::unique_ptr<Operator> generate();
 
-  class Error : public Exception {
+  class GenError : public Exception {
     public:
-      Error(const std::string message) : Exception(message) {
+      GenError(const std::string message) : Exception(message) {
       }
   };
 };

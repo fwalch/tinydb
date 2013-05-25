@@ -23,7 +23,7 @@ void SemanticAnalyzer::init() {
   }
 }
 
-void SemanticAnalyzer::analyzeAttribute(Parser::Attribute& attr, ::Attribute::Type& type, string context) {
+void SemanticAnalyzer::analyzeAttribute(Parser::Attribute& attr, string context, ::Attribute& tableAttr) {
   if (attr.name == Parser::Attribute::STAR) return;
 
   if (attr.relation == "") {
@@ -33,12 +33,11 @@ void SemanticAnalyzer::analyzeAttribute(Parser::Attribute& attr, ::Attribute::Ty
     for (auto relIt : relations) {
       Table& table = database.getTable(relIt.second.relation);
       for (unsigned i = 0; i < table.getAttributeCount(); i++) {
-        ::Attribute tableAttr = table.getAttribute(i);
+        tableAttr = table.getAttribute(i);
         if (tableAttr.getName() == attr.name) {
           if (found) {
             throw SemanticError("Attribute '" + attr.name + "' used in " + context + " is ambiguous");
           }
-          type = tableAttr.getType();
           found = true;
           break;
         }
@@ -61,16 +60,20 @@ void SemanticAnalyzer::analyzeAttribute(Parser::Attribute& attr, ::Attribute::Ty
       throw SemanticError("Attribute '" + attr.name + "' does not exist in relation '" + rIt->second.relation + "'");
     }
 
-    type = table.getAttribute(attrIndex).getType();
+    tableAttr = table.getAttribute(attrIndex);
   }
 }
 
-void SemanticAnalyzer::execute() {
+void SemanticAnalyzer::execute(QueryGraph& queryGraph) {
   init();
 
-  ::Attribute::Type projectionType;
+  ::Attribute tableAttr;
   for (Parser::Attribute& attr : result.projections) {
-    analyzeAttribute(attr, projectionType, "SELECT");
+    analyzeAttribute(attr, "SELECT", tableAttr);
+  }
+
+  for (auto relation : result.relations) {
+    queryGraph.createNode(relation, database.getTable(relation.relation));
   }
 
   // Check that all selections are valid
@@ -78,12 +81,14 @@ void SemanticAnalyzer::execute() {
     Parser::Attribute& attr = selection.first;
     Parser::Constant& c = selection.second;
 
-    ::Attribute::Type type;
-    analyzeAttribute(attr, type, "WHERE");
+    ::Attribute tableAttr;
+    analyzeAttribute(attr, "WHERE", tableAttr);
 
-    if (type != c.type) {
+    if (tableAttr.getType() != c.type) {
       throw SemanticError("Attribute '" + attr.name + "' and constant '" + c.value + "' do not have the same type (WHERE clause)");
     }
+
+    queryGraph.addSelection(attr, c);
   }
 
   // Check that all joins are valid
@@ -91,13 +96,15 @@ void SemanticAnalyzer::execute() {
     Parser::Attribute& attr1 = joinCondition.first;
     Parser::Attribute& attr2 = joinCondition.second;
 
-    ::Attribute::Type type1;
-    ::Attribute::Type type2;
-    analyzeAttribute(attr1, type1, "WHERE");
-    analyzeAttribute(attr2, type2, "WHERE");
+    ::Attribute tableAttr1;
+    ::Attribute tableAttr2;
+    analyzeAttribute(attr1, "WHERE", tableAttr1);
+    analyzeAttribute(attr2, "WHERE", tableAttr2);
 
-    if (type1 != type2) {
+    if (tableAttr1.getType() != tableAttr2.getType()) {
       throw SemanticError("Attributes '" + attr1.name + "' and '" + attr2.name + "' do not have the same type (WHERE clause");
     }
+
+    queryGraph.createEdge(attr1, attr2, tableAttr1, tableAttr2);
   }
 }

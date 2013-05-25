@@ -1,5 +1,5 @@
 #!/bin/sh
 
 cd `dirname $0`/..
-bin/graph "$1" | circo -Tpng | display -
+bin/query "$1" "$2" | circo -Tpng | display -
 

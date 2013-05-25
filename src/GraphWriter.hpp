@@ -2,16 +2,16 @@
 #define H_GraphWriter
 
 #include "Exception.hpp"
-#include "Parser.hpp"
+#include "QueryGraph.hpp"
 #include <ostream>
 
 class GraphWriter {
   private:
-    Parser::Result& result;
+    QueryGraph& graph;
 
   public:
-    GraphWriter(Parser::Result& result)
-      : result(result) { }
+    GraphWriter(QueryGraph& graph)
+      : graph(graph) { }
 
     void writeQueryGraph(std::ostream& output);
 };

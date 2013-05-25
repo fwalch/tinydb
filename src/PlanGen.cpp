@@ -142,7 +142,7 @@ unique_ptr<Operator> PlanGen::generate() {
   }
 
   if (selections.size() != processedSelections) {
-    throw Exception("Internal error: could not push down all selections.");
+    throw GenError("Internal error: could not push down all selections.");
   }
 
   // Add joins

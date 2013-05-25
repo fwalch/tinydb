@@ -2,6 +2,7 @@
 #include "Parser.hpp"
 #include "PlanGen.hpp"
 #include "SemanticAnalyzer.hpp"
+#include "GraphWriter.hpp"
 #include <iostream>
 #include <memory>
 //---------------------------------------------------------------------------
@@ -12,7 +13,7 @@ static void showHelp(const char* argv0)
 {
    cout << "usage: " << argv0 << " [db] [query]" << endl
         << "supported query types" << endl
-        << "select (*|attribute(,attribute)*)" << endl
+        << "select|explain (*|attribute(,attribute)*)" << endl
         << "from relation binding(,relation binding)*" << endl
         << "where binding.attribute=(binding.attribute|constant)" << endl
         << "(and binding.attribute=(binding.attribute|constant))*" << endl;
@@ -39,28 +40,45 @@ int main(int argc, char* argv[])
    }
 
    SemanticAnalyzer analyzer(db, result);
+
+   QueryGraph queryGraph;
    try {
-     analyzer.execute();
+     analyzer.execute(queryGraph);
    }
    catch (SemanticAnalyzer::SemanticError e) {
      cerr << "Semantic error: " << e.what() << endl;
      return 1;
    }
 
-   PlanGen planGen(db, result);
+   if (result.explain) {
+     // Output query graph
+     GraphWriter graphWriter(queryGraph);
 
-   unique_ptr<Operator> output;
-   try {
-     output = planGen.generate();
+     try {
+       graphWriter.writeQueryGraph(cout);
+     }
+     catch (Exception e) {
+       cerr << "An error occured: " << e.what() << endl;
+       return 1;
+     }
    }
-   catch (PlanGen::Error e) {
-     cerr << "Plan generation error: " << e.what() << endl;
-     return 1;
-   }
+   else {
+     // Output query result
+     PlanGen planGen(db, result);
 
-   output->open();
-   while (output->next());
-   output->close();
+     unique_ptr<Operator> output;
+     try {
+       output = planGen.generate();
+     }
+     catch (PlanGen::GenError e) {
+       cerr << "Plan generation error: " << e.what() << endl;
+       return 1;
+     }
+
+     output->open();
+     while (output->next());
+     output->close();
+   }
 
    db.close();
 
