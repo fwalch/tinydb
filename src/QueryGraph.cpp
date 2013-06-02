@@ -8,7 +8,7 @@ QueryGraph::~QueryGraph() {
   }
 
   for (auto edge : edges) {
-    delete edge.second;
+    delete edge;
   }
 }
 
@@ -49,15 +49,17 @@ void QueryGraph::addSelection(Parser::Attribute& attr, Parser::Constant& c) {
 void QueryGraph::createEdge(Parser::Attribute& attr1, Parser::Attribute& attr2, Attribute& tattr1, Attribute& tattr2) {
   Node* node1 = nodes.at(attr1.relation);
   Node* node2 = nodes.at(attr2.relation);
-  std::string predicate = attr1.getName() + " = " + attr2.getName();
 
   Edge* edge = new Edge {
     node1,
     node2,
-    predicate,
+    attr1.name,
+    attr2.name,
+    attr1.getName(),
+    attr2.getName(),
     estimateSelectivity(tattr1, tattr2, node1, node2)
   };
-  edges.insert(make_pair(predicate, edge));
-  node1->edges.insert(make_pair(predicate, edge));
-  node2->edges.insert(make_pair(predicate, edge));
+  edges.push_back(edge);
+  node1->edges.push_back(edge);
+  node2->edges.push_back(edge);
 }

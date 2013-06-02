@@ -16,10 +16,11 @@ void GraphWriter::writeQueryGraph(std::ostream& output) {
 
   output << "  // Join edges" << endl;
   for (auto edge : graph.edges) {
-    output << "  " << edge.second->node1->relation <<
-      " -- " << edge.second->node2->relation <<
-      "[label=\"" + to_string(edge.second->selectivity) + "\"]"<< ";" << endl;
+    output << "  " << edge->node1->relation <<
+      " -- " << edge->node2->relation <<
+      "[label=\"" + to_string(edge->selectivity) + "\"]"<< ";" << endl;
   }
 
   output << "}" << endl;
 }
+

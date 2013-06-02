@@ -7,11 +7,6 @@ Query Optimization Course
  1. Run `make` to compile the source code.
  2. Run `make db` to create a sample database inside the `data` directory.
 
-## Exercise 1
-
-The source code is located in `exercises/ex01`. Execute the code using `bin/ex01-query1` and
-`bin/ex01-query2`.
-
 ## Query execution
 
 The query execution logic can be found in `src`; test it using e.g.
@@ -29,15 +24,24 @@ This should give the following output:
     Bioethik
     Der Wiener Kreis
 
-## Query graph
+## Query graph & join tree
 
-To generate an image file, the `circo` executable provided by graphviz is needed. When using the helper script `bin/graph.sh`, ImageMagick's `display` command is utilized.
+Basically, query graph and join tree will be generated and shown when using `EXPLAIN` instead of `SELECT` in SQL queries.
+
+To generate an image file, the `circo` and `dot` executables provided by graphviz are needed. Also ImageMagick's `display` command is utilized.
 
 Test it using e.g.
 
-    bin/query data/uni "EXPLAIN * FROM studenten s, hoeren h, vorlesungen v WHERE s.matrnr=h.matrnr AND v.vorlnr=h.vorlnr" | circo -Tpng -oquery.png
+    bin/query data/uni "EXPLAIN * FROM studenten s, hoeren h, vorlesungen v WHERE s.matrnr=h.matrnr AND v.vorlnr=h.vorlnr"
 
-or use the provided helper script
+# Exercises
 
-    bin/graph.sh data/uni "EXPLAIN * FROM studenten s, hoeren h, vorlesungen v WHERE s.matrnr=h.matrnr AND v.vorlnr=h.vorlnr"
+## Exercise 1
 
+The source code is located in `exercises/ex01`. Execute the code using `bin/ex01-query1` and
+`bin/ex01-query2`.
+
+## Exercise 5
+
+  1. Execute `make tpch-db` to fetch TPC-H data (7zip is required) and create a database.
+  2. Run `bin/ex05-query.sh` to execute the exercise query. It runs the query using `EXPLAIN`, so 

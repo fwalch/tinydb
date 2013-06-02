@@ -4,6 +4,7 @@
 #include "SemanticAnalyzer.hpp"
 #include "GraphWriter.hpp"
 #include <iostream>
+#include <fstream>
 #include <memory>
 //---------------------------------------------------------------------------
 using namespace std;
@@ -55,30 +56,49 @@ int main(int argc, char* argv[])
      GraphWriter graphWriter(queryGraph);
 
      try {
-       graphWriter.writeQueryGraph(cout);
+       fstream queryGraphFile("queryGraph.dot", ios_base::out);
+       graphWriter.writeQueryGraph(queryGraphFile);
+       queryGraphFile.close();
+
+       cout << "Query graph should be shown now; otherwise try to use bin/query-graph.sh." << endl;
+       system("((cat queryGraph.dot | circo -Tpng | display -) && rm queryGraph.dot) &");
      }
      catch (Exception e) {
        cerr << "An error occured: " << e.what() << endl;
        return 1;
      }
    }
-   else {
-     // Output query result
-     PlanGen planGen(db, result);
 
-     unique_ptr<Operator> output;
-     try {
-       output = planGen.generate();
+   // Output query result
+   PlanGen planGen(db, queryGraph, result);
+
+   unique_ptr<Operator> output;
+   try {
+     fstream joinTreeFile;
+
+     if (result.explain) {
+       joinTreeFile.open("joinTree.dot", ios_base::out);
      }
-     catch (PlanGen::GenError e) {
-       cerr << "Plan generation error: " << e.what() << endl;
-       return 1;
+     else {
+       joinTreeFile.open("/dev/null", ios_base::out);
      }
 
-     output->open();
-     while (output->next());
-     output->close();
+     output = planGen.generate(joinTreeFile);
+     joinTreeFile.close();
+
+     if (result.explain) {
+       cout << "Join tree should be shown now; otherwise try to use bin/join-tree.sh" << endl;
+       system("((cat joinTree.dot | dot -Tpng | display -) && rm joinTree.dot) &");
+     }
    }
+   catch (PlanGen::GenError e) {
+     cerr << "Plan generation error: " << e.what() << endl;
+     return 1;
+   }
+
+   output->open();
+   while (output->next());
+   output->close();
 
    db.close();
 

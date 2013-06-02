@@ -19,10 +19,14 @@ EXEEXT:=
 BATEXT:=
 endif
 
-all: bin/admin$(EXEEXT) bin/query$(EXEEXT) bin/graph$(EXEEXT) examples_bin exercises_bin
+all: bin/admin$(EXEEXT) bin/query$(EXEEXT) examples_bin exercises_bin
 
 db:
 	cd data && ./loaduni$(BATEXT)
+
+tpch-db:
+	bin/fetch-tpch.sh
+	cd data/tpch && PATH=../../bin ./loadtpch-cpp
 
 include src/LocalMakefile
 include examples/LocalMakefile

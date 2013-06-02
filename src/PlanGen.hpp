@@ -3,7 +3,7 @@
 
 #include "Database.hpp"
 #include "Table.hpp"
-#include "Parser.hpp"
+#include "QueryGraph.hpp"
 #include "Exception.hpp"
 #include "operator/Operator.hpp"
 #include "operator/Tablescan.hpp"
@@ -11,14 +11,18 @@
 #include "operator/Printer.hpp"
 #include "operator/Selection.hpp"
 #include "operator/CrossProduct.hpp"
-#include "operator/Chi.hpp"
+#include "operator/HashJoin.hpp"
 #include "Register.hpp"
 #include <unordered_map>
+#include <map>
 #include <vector>
+#include <set>
 #include <memory>
+#include <ostream>
 
 class PlanGen {
   private:
+    QueryGraph& queryGraph;
     Parser::Result& result;
     Database& database;
     std::unordered_map<std::string, Table*> tables;
@@ -27,19 +31,21 @@ class PlanGen {
     std::unordered_map<std::string, const Register*> registers;
     std::vector<const Register*> projection;
     std::vector<std::tuple<std::string, const Register*, const Register*>> selections;
-    std::vector<std::pair<const Register*, const Register*>> joins;
     std::vector<Register> constants;
+    typedef std::map<std::set<std::string>, std::tuple<std::string, unsigned, std::unique_ptr<Operator>, float>> WaitingJoinsType;
+    WaitingJoinsType waitingJoins;
 
     void loadTables();
     void loadProjections();
     void loadSelections();
-    void loadJoins();
+    void loadJoinRegisters();
+    WaitingJoinsType::iterator findWaitingJoin(std::string str);
     std::unique_ptr<Operator> addSelections(std::string relation, std::unique_ptr<Operator> op, size_t& processedSelections);
 
   public:
-    PlanGen(Database& database, Parser::Result& result)
-      : result(result), database(database) { }
-    std::unique_ptr<Operator> generate();
+    PlanGen(Database& database, QueryGraph& queryGraph, Parser::Result& result)
+      : queryGraph(queryGraph), result(result), database(database) { }
+    std::unique_ptr<Operator> generate(std::ostream& explain);
 
   class GenError : public Exception {
     public:
