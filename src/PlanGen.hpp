@@ -30,7 +30,8 @@ class PlanGen {
     std::unordered_map<std::string, const Attribute*> attributes;
     std::unordered_map<std::string, const Register*> registers;
     std::vector<const Register*> projection;
-    std::vector<std::tuple<std::string, const Register*, const Register*>> selections;
+    typedef std::vector<std::tuple<std::string, const Register*, const Register*>> SelectionsType;
+    SelectionsType selections;
     std::vector<Register> constants;
     typedef std::map<std::set<std::string>, std::tuple<std::string, unsigned, std::unique_ptr<Operator>, float>> WaitingJoinsType;
     WaitingJoinsType waitingJoins;
@@ -40,7 +41,7 @@ class PlanGen {
     void loadSelections();
     void loadJoinRegisters();
     WaitingJoinsType::iterator findWaitingJoin(std::string str);
-    std::unique_ptr<Operator> addSelections(std::string relation, std::unique_ptr<Operator> op, size_t& processedSelections);
+    std::unique_ptr<Operator> addSelections(std::string relation, std::unique_ptr<Operator> op);
 
   public:
     PlanGen(Database& database, QueryGraph& queryGraph, Parser::Result& result)

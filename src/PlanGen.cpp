@@ -116,13 +116,18 @@ void PlanGen::loadSelections() {
   }
 }
 
-unique_ptr<Operator> PlanGen::addSelections(string relation, unique_ptr<Operator> op, size_t& processedSelections) {
+unique_ptr<Operator> PlanGen::addSelections(string relation, unique_ptr<Operator> op) {
+  vector<SelectionsType::iterator> toErase;
   // If there are appropriate selections, add them now
-  for (auto selIt : selections) {
-    if (get<0>(selIt) == relation) {
-      op = unique_ptr<Selection>(new Selection(move(op), get<1>(selIt), get<2>(selIt)));
-      processedSelections++;
+  for (auto selIt = selections.begin(); selIt != selections.end(); selIt++) {
+    if (get<0>(*selIt) == relation) {
+      op = unique_ptr<Selection>(new Selection(move(op), get<1>(*selIt), get<2>(*selIt)));
+      toErase.push_back(selIt);
     }
+  }
+
+  for (auto sel : toErase) {
+    selections.erase(sel);
   }
   return op;
 }
@@ -144,7 +149,6 @@ unique_ptr<Operator> PlanGen::generate(ostream& explain) {
   loadSelections();
   loadJoinRegisters();
 
-  size_t processedSelections = 0;
   vector<QueryGraph::Edge*> edges(queryGraph.edges);
 
   // First, add all relations into waiting map
@@ -152,7 +156,7 @@ unique_ptr<Operator> PlanGen::generate(ostream& explain) {
     std::string relation = nodeIt.first;
 
     unique_ptr<Operator> op = move(tablescans.at(relation));
-    op = move(addSelections(relation, move(op), processedSelections));
+    op = move(addSelections(relation, move(op)));
     unsigned cardinality = tables.at(relation)->getCardinality();
 
     explain << relation << ";" << endl;
@@ -247,7 +251,7 @@ unique_ptr<Operator> PlanGen::generate(ostream& explain) {
     joinId++;
   }
 
-  if (selections.size() != processedSelections) {
+  if (selections.size() > 0) {
     throw GenError("Internal error: could not push down all selections.");
   }
 
