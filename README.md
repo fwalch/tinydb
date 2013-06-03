@@ -28,7 +28,7 @@ This should give the following output:
 
 Basically, query graph and join tree will be generated and shown when using `EXPLAIN` instead of `SELECT` in SQL queries.
 
-To generate an image file, the `circo` and `dot` executables provided by graphviz are needed. Also ImageMagick's `display` command is utilized.
+To generate an image file, the `circo` and `dot` executables provided by graphviz are needed. Also ImageMagick's `display` command is required.
 
 Test it using e.g.
 
@@ -44,4 +44,4 @@ The source code is located in `exercises/ex01`. Execute the code using `bin/ex01
 ## Exercise 5
 
   1. Execute `make tpch-db` to fetch TPC-H data (7zip is required) and create a database.
-  2. Run `bin/ex05-query.sh` to execute the exercise query. It runs the query using `EXPLAIN`, so 
+  2. Run `bin/ex05-query.sh` to execute the exercise query. It runs the query using `EXPLAIN`, so query graph and join tree will be shown.
