@@ -8,3 +8,6 @@ bin/admin$(EXEEXT): bin/Admin.o $(obj)
 
 bin/query$(EXEEXT): bin/Query.o $(obj)
 	$(BUILDEXE)
+
+bin/dyck$(EXEEXT): bin/Dyck.o $(obj)
+	$(BUILDEXE)

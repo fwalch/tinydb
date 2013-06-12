@@ -45,3 +45,7 @@ The source code is located in `exercises/ex01`. Execute the code using `bin/ex01
 
   1. Execute `make tpch-db` to fetch TPC-H data (7zip is required) and create a database.
   2. Run `bin/ex05-query.sh` to execute the exercise query. It runs the query using `EXPLAIN`, so query graph and join tree will be shown.
+
+## Exercise 7
+
+To generate Dyck words, execute e.g. `bin/dyck 7 56`. This will generate the Dyck word from the exercise session 7 example, "(((())())(()))".
