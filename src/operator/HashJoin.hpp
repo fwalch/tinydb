@@ -36,6 +36,8 @@ class HashJoin : public Operator
 
    /// Get all produced values
    std::vector<const Register*> getOutput() const;
+
+   friend class PlanGen;
 };
 //---------------------------------------------------------------------------
 #endif

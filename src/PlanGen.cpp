@@ -4,8 +4,25 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
+#include <cmath>
 
 using namespace std;
+
+std::ostream& operator<<(std::ostream &stream, const set<string>& set);
+std::ostream& operator<<(std::ostream &stream, const set<string>& set) {
+  for (auto str : set) {
+    stream << str << " ";
+  }
+  return stream;
+}
+
+set<string> merge(set<string> left, set<string> right) {
+  set<string> s(left);
+  for (string str : right) {
+    s.insert(str);
+  }
+  return s;
+}
 
 void PlanGen::loadJoinRegisters() {
   for (auto join : result.joinConditions) {
@@ -132,18 +149,41 @@ unique_ptr<Operator> PlanGen::addSelections(string relation, unique_ptr<Operator
   return op;
 }
 
-PlanGen::WaitingJoinsType::iterator PlanGen::findWaitingJoin(std::string str) {
-  for (auto joinIt = waitingJoins.begin(); joinIt != waitingJoins.end(); ++joinIt) {
-    if (joinIt->first.find(str) != joinIt->first.end()) {
-      return joinIt;
+bool PlanGen::canJoin(std::set<std::string> left, std::set<std::string> right, std::vector<QueryGraph::Edge*> edges, float& cost, QueryGraph::Edge** edge) {
+  for (auto it = edges.begin(); it != edges.end(); it++) {
+    string rel1 = (*it)->node1->relation;
+    string rel2 = (*it)->node2->relation;
+
+    bool leftHas1 = left.find(rel1) != left.end();
+    bool leftHas2 = left.find(rel2) != left.end();
+
+    bool rightHas1 = right.find(rel1) != right.end();
+    bool rightHas2 = right.find(rel2) != right.end();
+
+    if (((leftHas1 && rightHas2) || (leftHas2 && rightHas1))
+        && !((leftHas1 && rightHas1) || (leftHas2 && rightHas2))) {
+      *edge = *it;
+      edges.erase(it);
+      cost = getCost(left, right, *edge);
+      return true;
     }
   }
-  return waitingJoins.end();
+  return false;
+}
+
+float PlanGen::lookupCost(set<string> relations) {
+  auto it = dpLookup.find(relations);
+  if (it != dpLookup.end()) {
+    return it->second;
+  }
+  return numeric_limits<float>::infinity();
+}
+
+float PlanGen::getCost(set<string> left, set<string> right, QueryGraph::Edge* edge) {
+  return dpLookup[left] + dpLookup[right] + dpLookup[left]*dpLookup[right]*edge->selectivity;
 }
 
 unique_ptr<Operator> PlanGen::generate(ostream& explain) {
-  explain << "graph {" << endl;
-
   loadTables();
   loadProjections();
   loadSelections();
@@ -151,127 +191,82 @@ unique_ptr<Operator> PlanGen::generate(ostream& explain) {
 
   vector<QueryGraph::Edge*> edges(queryGraph.edges);
 
-  // First, add all relations into waiting map
+  dpTable.resize(queryGraph.nodes.size());
+
+  // First, add all relations into map
   for (auto nodeIt : queryGraph.nodes) {
-    std::string relation = nodeIt.first;
+    string relation = nodeIt.first;
 
     unique_ptr<Operator> op = move(tablescans.at(relation));
     op = move(addSelections(relation, move(op)));
     unsigned cardinality = tables.at(relation)->getCardinality();
 
-    explain << relation << ";" << endl;
-
     set<string> set { relation };
 
-    waitingJoins[set] = make_tuple(relation, cardinality, move(op), 0);
+    // Prepare dpTable for DPSub
+    dpTable[0].insert(make_pair(set, op.release()));
+    dpLookup.insert(make_pair(set, cardinality));
+    dpDebug.insert(make_pair(set, relation));
   }
 
-  // GOO on join edges
-  unsigned joinId = 0;
-  while (edges.size() > 0) {
-    // select edge with lowest selectivity
-    size_t edgeIndex = -1;
-    double edgeCost = numeric_limits<double>::infinity();
+  // Execute DPsub
+  for (size_t i = 1; i < dpTable.size(); i++) {
+    for (size_t j = 0; j < i; j++) {
+      DpTableType::value_type& leftMap = dpTable[i-1];
+      for (auto leftIt = leftMap.begin(); leftIt != leftMap.end(); leftIt++) {
+        set<string> left = leftIt->first;
 
-    for (size_t i = 0; i < edges.size(); i++) {
-      double value = edges[i]->selectivity*edges[i]->node1->cardinality*edges[i]->node2->cardinality;
-      if (value < edgeCost) {
-        edgeCost = value;
-        edgeIndex = i;
+        DpTableType::value_type& rightMap = dpTable[i-j-1];
+        for (auto rightIt = rightMap.begin(); rightIt != rightMap.end(); rightIt++) {
+          set<string> right = rightIt->first;
+          set<string> joined = merge(left, right);
+
+          float cost;
+          QueryGraph::Edge* edge = nullptr;
+
+          if (canJoin(left, right, edges, cost, &edge) && lookupCost(joined) > cost) {
+            DpTableType::value_type& dpMap = dpTable[i];
+            dpDebug.insert(make_pair(joined, "(" + dpDebug[left] + ") join (" + dpDebug[right] + ")"));
+
+            auto it = dpMap.find(joined);
+            if (it != dpMap.end()) {
+              HashJoin* join = reinterpret_cast<HashJoin*>(it->second);
+              join->left.release();
+              join->right.release();
+              dpMap.erase(it);
+            }
+
+            auto leftOp = unique_ptr<Operator>(leftIt->second);
+            auto rightOp = unique_ptr<Operator>(rightIt->second);
+            auto leftValue = registers.at(edge->fullPredicate1);
+            auto rightValue = registers.at(edge->fullPredicate2);
+
+            HashJoin* hashJoin = new HashJoin(move(leftOp), move(rightOp), leftValue, rightValue);
+            dpMap.insert(make_pair(joined, hashJoin));
+            dpLookup[joined] = cost;
+          }
+        }
       }
     }
-    QueryGraph::Edge* edge = edges.at(edgeIndex);
+  }
 
-    std::string& relation1 = edge->node1->relation;
-    std::string& relation2 = edge->node2->relation;
-
-    // Process join of given edge
-    unique_ptr<Operator> left = nullptr;
-    unique_ptr<Operator> right = nullptr;
-
-    set<string> leftSet{relation1};
-    set<string> rightSet{relation2};
-
-    std::string leftId;
-    std::string rightId;
-
-    unsigned leftCardinality;
-    unsigned rightCardinality;
-
-    float leftCost;
-    float rightCost;
-
-    auto joinedRelation1 = findWaitingJoin(relation1);
-    auto joinedRelation2 = findWaitingJoin(relation2);
-
-    if (joinedRelation1 != waitingJoins.end()) {
-      left = move(get<2>(joinedRelation1->second));
-      leftSet = joinedRelation1->first;
-      leftId = get<0>(joinedRelation1->second);
-      leftCardinality = get<1>(joinedRelation1->second);
-      leftCost = get<3>(joinedRelation1->second);
-      waitingJoins.erase(joinedRelation1);
+  for (DpTableType::value_type& map : dpTable) {
+    for (DpTableType::value_type::value_type& pair : map) {
+      // Print DP table of smaller size (already finished)
+      explain << pair.first << "| " << dpDebug[pair.first] << endl;
     }
-    else {
-      throw GenError("Internal error: relation not found");
-    }
-    auto leftValue = registers.at(edge->fullPredicate1);
-
-    if (joinedRelation2 != waitingJoins.end()) {
-      right = move(get<2>(joinedRelation2->second));
-      rightSet = joinedRelation2->first;
-      rightId = get<0>(joinedRelation2->second);
-      rightCardinality = get<1>(joinedRelation2->second);
-      rightCost = get<3>(joinedRelation2->second);
-      waitingJoins.erase(joinedRelation2);
-    }
-    else {
-      throw GenError("Internal error: relation not found");
-    }
-    auto rightValue = registers.at(edge->fullPredicate2);
-
-    set<string> set(leftSet);
-    for (auto str : rightSet) {
-      set.insert(str);
-    }
-
-    float cost = leftCost + rightCost + leftCardinality*rightCardinality*edge->selectivity;
-    auto joinIdStr = "J" + to_string(joinId);
-
-    unique_ptr<HashJoin> join(new HashJoin(move(left), move(right), leftValue, rightValue));
-    waitingJoins[set] = make_tuple(joinIdStr, cost, move(join), cost);
-
-    cout << "Joining " << joinIdStr << " = " << leftId << " and " << rightId << " (total estimated cost up to this point: " << cost << ")" << endl;
-
-    explain << joinIdStr << ";" << endl;
-    explain << joinIdStr << " -- " << leftId << ";" << endl;
-    explain << joinIdStr << " -- " << rightId << ";" << endl;
-
-    edges.erase(edges.begin()+edgeIndex);
-    joinId++;
   }
 
   if (selections.size() > 0) {
     throw GenError("Internal error: could not push down all selections.");
   }
 
-  unique_ptr<Operator> op = nullptr;
-  std::string previousId;
-
-  // Cross-product remaining joins and relations
-  for (auto joinIt = waitingJoins.begin(); joinIt != waitingJoins.end(); ++joinIt) {
-    if (op == nullptr) {
-      op = move(get<2>(joinIt->second));
-      previousId = get<0>(joinIt->second);
-      continue;
-    }
-    op = unique_ptr<CrossProduct>(new CrossProduct(move(op), move(get<2>(joinIt->second))));
-
-    explain << previousId << " -- " << get<0>(joinIt->second) << ";" << endl;
-    previousId = get<0>(joinIt->second);
+  DpTableType::value_type& finalDpEntry = dpTable[dpTable.size()-1];
+  if (finalDpEntry.size() != 1) {
+    throw GenError("Could not execute DPSub; only connected relations are supported (no cross-products)");
   }
 
-  explain << "}" << endl;
+  unique_ptr<Operator> op = unique_ptr<Operator>(finalDpEntry.begin()->second);
 
   // Apply final projection and print output
   op = unique_ptr<Projection>(new Projection(move(op), projection));

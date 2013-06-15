@@ -19,6 +19,7 @@
 #include <set>
 #include <memory>
 #include <ostream>
+#include <functional>
 
 class PlanGen {
   private:
@@ -33,15 +34,20 @@ class PlanGen {
     typedef std::vector<std::tuple<std::string, const Register*, const Register*>> SelectionsType;
     SelectionsType selections;
     std::vector<Register> constants;
-    typedef std::map<std::set<std::string>, std::tuple<std::string, unsigned, std::unique_ptr<Operator>, float>> WaitingJoinsType;
-    WaitingJoinsType waitingJoins;
+    typedef std::vector<std::map<std::set<std::string>, Operator*>> DpTableType;
+    DpTableType dpTable;
+    std::map<std::set<std::string>, float> dpLookup;
+    std::map<std::set<std::string>, std::string> dpDebug;
 
     void loadTables();
     void loadProjections();
     void loadSelections();
     void loadJoinRegisters();
-    WaitingJoinsType::iterator findWaitingJoin(std::string str);
     std::unique_ptr<Operator> addSelections(std::string relation, std::unique_ptr<Operator> op);
+
+    bool canJoin(std::set<std::string> left, std::set<std::string> right, std::vector<QueryGraph::Edge*> edges, float& cost, QueryGraph::Edge** edge);
+    float lookupCost(std::set<std::string> relations);
+    float getCost(std::set<std::string> left, std::set<std::string> right, QueryGraph::Edge* edge);
 
   public:
     PlanGen(Database& database, QueryGraph& queryGraph, Parser::Result& result)
