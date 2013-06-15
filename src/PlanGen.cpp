@@ -160,7 +160,9 @@ bool PlanGen::canJoin(std::set<std::string> left, std::set<std::string> right, s
     bool rightHas1 = right.find(rel1) != right.end();
     bool rightHas2 = right.find(rel2) != right.end();
 
-    if (((leftHas1 && rightHas2) || (leftHas2 && rightHas1))
+    // Only join in specific order (relation 1 in left set, rel2 in right set)
+    if ((leftHas1 && rightHas2)
+        // Only join if not already joined
         && !((leftHas1 && rightHas1) || (leftHas2 && rightHas2))) {
       *edge = *it;
       edges.erase(it);
